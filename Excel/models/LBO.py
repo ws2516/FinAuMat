@@ -41,13 +41,14 @@ class Revenue:
 
 	kind = 'Revenue'
 
-	def __init__(self, years):
-		self.rev = self.assumptions('starting revenue?')
-		self.revGrowthInitial = self.assumptions('initial revenue growth rate?')
-		self.revGrowthEnding = self.assumptions('final revenue growth rate?')
+	def __init__(self, years, named):
+		self.rev = self.assumptions('starting ' + str(named) + '?')
+		self.revGrowthInitial = self.assumptions('initial '+ str(named) + ' growth rate (as % per year)?')
+		self.revGrowthEnding = self.assumptions('final '+ str(named) + ' growth rate (as % per year)?')
 		self.revGrowthStep = self.stepCalc(self.revGrowthInitial, self.revGrowthEnding, years)
-		self.revGrowth = [self.revGrowthInitial + i*self.revGrowthStep for i in range(1,int(years)+1)]
+		self.revGrowth = [self.revGrowthInitial + i*self.revGrowthStep for i in range(0,int(years))]
 		self.revProjection = self.project(self.rev, self.revGrowth)
+	
 
 	def project(self, initial, rateList):
 		temp = [initial]
@@ -65,14 +66,14 @@ class COGs:
 
 	kind = 'COGS'
 	
-	def __init__(self, years, revProjection):
-		self.cogs = self.assumptions('starting COGs?')
-		self.cogsGrowthInitial = self.assumptions('initial COGs margin (as % of Rev)?')
-		self.cogsGrowthEnding = self.assumptions('final COGs margin (as % of Rev)?')
+	def __init__(self, years, revProjection, named):
+		self.cogs = self.assumptions('starting ' + str(named) + '?')
+		self.cogsGrowthInitial = self.assumptions('initial '+ str(named) + ' margin (as % of Rev)?')
+		self.cogsGrowthEnding = self.assumptions('final '+ str(named) + ' margin (as % of Rev)?')
 		self.cogsGrowthStep = self.stepCalc(self.cogsGrowthInitial, self.cogsGrowthEnding, years)
 		self.cogsGrowth = [self.cogsGrowthInitial + i*self.cogsGrowthStep for i in range(0,int(years)+1)]
 		self.cogsProjection = [revProjection[i] * self.cogsGrowth[i] for i in range(len(revProjection))]
-		print(self.cogsProjection, self.cogsGrowth, self.cogsGrowthStep)
+		print(self.cogsProjection)
 
 	def stepCalc(self, initial, ending, steps):
 		return round( (ending - initial)/steps , 5 )
@@ -98,16 +99,49 @@ class OpEx:
 			
 	def assumptions(self,  string ):
 		return float(input('What is the input for ' + string + ' '))
-		
-		
-class OpExs:
 
-	kind = 'OpEx'
+class iterativeBuilder:
+
+	kind = 'Builder'
 	
-	def __init__(self, nameList, projection):
-		for i in nameList:
-			setattr(self, i, projection)
+	def __init__(self, item, years, revProjection):
+		Names = input('What are the ' + item + ' Expenses, input in a list like the following: SGA, Sales and Marketing, ... (Please ensure you use a comma)')
+		if revProjection != 'None':
+			ProjectionList, MarginList = [], []
+			for i in Names.split(','):
+				if item == 'COGS':
+					temp = COGs(years, revProjection, i)
+					ProjectionList += [temp.cogsProjection]
+					MarginList  += [temp.cogsGrowth]
+					setattr(self, i+'Margin', temp.cogsGrowth)
+					setattr(self, i+'Projection', temp.cogsProjection)
+			
+				elif item == 'OpEx':
+					temp = OpEx(years, revProjection, i)
+					ProjectionList += [temp.opexProjection]
+					MarginList  += [temp.opexGrowth]
+					setattr(self, i+'Margin', temp.opexGrowth)
+					setattr(self, i+'Projection', temp.opexProjection)
+				else:
+					print('No appropriate line item for this')
+			self.Projection = [sum(x) for x in zip(*ProjectionList)]
+			self.Margin = [sum(x) for x in zip(*MarginList)]
+			
+		else:
+			ProjectionList, MarginList = [], []
+			for i in Names.split(','):
+				if item == 'Revenue':
+					temp = Revenue(years, i)
+					ProjectionList += [temp.revProjection]
+					MarginList  += [temp.revGrowth]
+					setattr(self, i+'Margin', temp.revGrowth)
+					setattr(self, i+'Projection', temp.revProjection)
+			
+				else:
+					print('No appropriate line item for this')
 
+			self.Projection = [sum(x) for x in zip(*ProjectionList)]
+			self.Growth = [sum(x) for x in zip(*MarginList)]
 
 class incomeStatement:
 	
@@ -117,35 +151,22 @@ class incomeStatement:
 		
 		self.years = self.assumptions('modeled years?')
 		
-		#Make these subclasses? These go into EBITDA
-		Revenues = Revenue(self.years)
-		self.revProjection = Revenues.revProjection
-		self.revGrowth = Revenues.revGrowth
+		Rev = iterativeBuilder('Revenue', self.years, 'None')
+		self.revProjection = Rev.Projection
+		self.revGrowth = Rev.Growth
 		
-		COGS = COGs(self.years, self.revProjection)
-		self.cogsProjection = COGS.cogsProjection
-		self.cogsGrowth = COGS.cogsGrowth
+		COGS = iterativeBuilder('COGS', self.years, self.revProjection)
+		self.totalCOGSProjection = COGS.Projection
+		self.totalCOGSMargin = COGS.Margin
 		
-		self.grossProfit = [self.revProjection[i]-self.cogsProjection[i] for i in range(0,int(self.years)+1)]
+		self.grossProfit = [self.revProjection[i]-self.totalCOGSProjection[i] for i in range(0,int(self.years)+1)]
 		self.grossProfitMargin = [self.grossProfit[i]/self.revProjection[i] for i in range(0,int(self.years)+1)]
 		
+		OpEx = iterativeBuilder('OpEx', self.years, self.revProjection)
+		self.totalOpExProjection = OpEx.Projection
+		self.totalOpExMargin = OpEx.Margin
 		
-		#make this a function
-		OpExNames = input('What are the OpEx Expenses, input in a list like the following: SGA, Sales and Marketing, ... (Please ensure you use a comma)')
-		OpExProjectionList, OpExMarginList = [], []
-		for i in OpExNames.split(','):
-			temp = OpEx(self.years, self.revProjection, i)
-			OpExProjectionList += [temp.opexProjection]
-			OpExMarginList  += [temp.opexGrowth]
-		
-			setattr(self, i+'Margin', temp.opexGrowth)
-			setattr(self, i+'Projection', temp.opexProjection)
-			
-		self.totalOpExProjection = [sum(x) for x in zip(*OpExProjectionList)]
-		self.totalOpExMargin = [sum(x) for x in zip(*OpExMarginList)]
-		print(self.totalOpExProjection, self.totalOpExMargin)
-		
-		self.EBITDA = [self.revProjection[i]-self.cogsProjection[i]-self.totalOpExProjection[i] for i in range(0,int(self.years)+1)]
+		self.EBITDA = [self.revProjection[i]-self.totalCOGSProjection[i]-self.totalOpExProjection[i] for i in range(0,int(self.years)+1)]
 		self.EBITDAMargin = [self.EBITDA[i]/self.revProjection[i] for i in range(0,int(self.years)+1)]
 		print(self.EBITDA, self.EBITDAMargin)
 		
