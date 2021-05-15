@@ -73,7 +73,6 @@ class COGs:
 		self.cogsGrowthStep = self.stepCalc(self.cogsGrowthInitial, self.cogsGrowthEnding, years)
 		self.cogsGrowth = [self.cogsGrowthInitial + i*self.cogsGrowthStep for i in range(0,int(years)+1)]
 		self.cogsProjection = [revProjection[i] * self.cogsGrowth[i] for i in range(len(revProjection))]
-		print(self.cogsProjection)
 
 	def stepCalc(self, initial, ending, steps):
 		return round( (ending - initial)/steps , 5 )
@@ -92,7 +91,24 @@ class OpEx:
 		self.opexGrowthStep = self.stepCalc(self.opexGrowthInitial, self.opexGrowthEnding, years)
 		self.opexGrowth = [self.opexGrowthInitial + i*self.opexGrowthStep for i in range(0,int(years)+1)]
 		self.opexProjection = [revProjection[i] * self.opexGrowth[i] for i in range(len(revProjection))]
-		print(self.opexProjection)
+	
+	def stepCalc(self, initial, ending, steps):
+		return round( (ending - initial)/steps , 5 )
+			
+	def assumptions(self,  string ):
+		return float(input('What is the input for ' + string + ' '))
+
+class Depreciation:
+
+	kind = 'Depreciation'
+	
+	def __init__(self, years, revProjection, named):
+		self.depr = self.assumptions('starting ' + str(named) + '?')
+		self.deprGrowthInitial = self.assumptions('initial '+ str(named) + ' margin (as % of Rev)?')
+		self.deprGrowthEnding = self.assumptions('final '+ str(named) + ' margin (as % of Rev)?')
+		self.deprGrowthStep = self.stepCalc(self.deprGrowthInitial, self.deprGrowthEnding, years)
+		self.deprGrowth = [self.deprGrowthInitial + i*self.deprGrowthStep for i in range(0,int(years)+1)]
+		self.deprProjection = [revProjection[i] * self.deprGrowth[i] for i in range(len(revProjection))]
 	
 	def stepCalc(self, initial, ending, steps):
 		return round( (ending - initial)/steps , 5 )
@@ -105,7 +121,7 @@ class iterativeBuilder:
 	kind = 'Builder'
 	
 	def __init__(self, item, years, revProjection):
-		Names = input('What are the ' + item + ' Expenses, input in a list like the following: SGA, Sales and Marketing, ... (Please ensure you use a comma)')
+		Names = input('What are the ' + item + ' Expenses, input in a list like the following: Item A, Item B, Item C, ... (Please ensure you use a comma)')
 		if revProjection != 'None':
 			ProjectionList, MarginList = [], []
 			for i in Names.split(','):
@@ -122,6 +138,13 @@ class iterativeBuilder:
 					MarginList  += [temp.opexGrowth]
 					setattr(self, i+'Margin', temp.opexGrowth)
 					setattr(self, i+'Projection', temp.opexProjection)
+				
+				elif item == 'Depreciation':
+					temp = Depreciation(years, revProjection, i)
+					ProjectionList += [temp.deprProjection]
+					MarginList  += [temp.deprGrowth]
+					setattr(self, i+'Margin', temp.deprGrowth)
+					setattr(self, i+'Projection', temp.deprProjection)
 				else:
 					print('No appropriate line item for this')
 			self.Projection = [sum(x) for x in zip(*ProjectionList)]
@@ -142,7 +165,41 @@ class iterativeBuilder:
 
 			self.Projection = [sum(x) for x in zip(*ProjectionList)]
 			self.Growth = [sum(x) for x in zip(*MarginList)]
+			
+class balanceSheet:
 
+	
+	BS 2003
+			Assets
+				CA with WC toggle
+				PPE
+				Other with intangibles/asset top right toggle
+			Liabilities
+				shoulld be one class, maybe another for WC toggle
+			
+			Equity
+		Do a A - L = E check
+	
+	WC
+		Use BS 2003 and IS to get all WC for toggled vars
+	
+	BS 2003 Pro Forma Stuff - this needs an explanation
+	
+	Cash Flow
+	
+	Debt Paydown
+	
+	
+	Project BS 2004 Onwards
+	
+	Project CFS 2004 Onwards
+	
+	Project Debt Paydown 2004 Onwards
+	
+	Finish Income Statement
+	
+	
+	
 class incomeStatement:
 	
 	kind = 'Income Statement'
@@ -168,21 +225,15 @@ class incomeStatement:
 		
 		self.EBITDA = [self.revProjection[i]-self.totalCOGSProjection[i]-self.totalOpExProjection[i] for i in range(0,int(self.years)+1)]
 		self.EBITDAMargin = [self.EBITDA[i]/self.revProjection[i] for i in range(0,int(self.years)+1)]
-		print(self.EBITDA, self.EBITDAMargin)
 		
 		fA = financingAssumptions(self.EBITDA[0], self.years)
-		
-		self.depr = self.assumptions('starting Depreciation?')
-		self.deprGrowthInitial = self.assumptions('initial Depreciation margin (as % of Rev)?')
-		self.deprGrowthEnding = self.assumptions('final Depreciation margin (as % of Rev)?')
-		self.deprGrowthStep = self.stepCalc(self.deprGrowthInitial, self.deprGrowthEnding, self.years)
-		self.deprGrowth = [self.deprGrowthInitial + i*self.deprGrowthStep for i in range(0,int(self.years)+1)]
-		self.deprProjection = [self.revProjection[i] * self.deprGrowth[i] for i in range(len(self.revProjection))]
-		print(self.deprProjection)
+
+		Dep = iterativeBuilder('Depreciation', self.years, self.revProjection)
+		self.totalDepreciationProjection = Dep.Projection
+		self.totalDepreciationMargin = Dep.Margin
 
 		self.amort = self.assumptions('starting Amortization?')
-		self.amortProjection = [self.amort]+[self.amort + fA.totalLevCost]*(len(self.revProjection)-1)
-		print(self.amortProjection)		
+		self.amortProjection = [self.amort]+[self.amort + fA.totalLevCost]*(len(self.revProjection)-1)	
 		
 		self.EBIT = [self.EBITDA[i]-self.deprProjection[i]-self.amortProjection[i] for i in range(0,int(self.years)+1)]
 		self.EBITMargin = [self.EBIT[i]/self.revProjection[i] for i in range(0,int(self.years)+1)]
