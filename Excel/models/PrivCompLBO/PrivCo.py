@@ -23,6 +23,7 @@ LBO assumptions should be "standard" to a degree but we can build these out late
 '''
 
 import pandas as pd
+
 def listOp(list1, list2, op):
 	if op == '+':
 		sum_list = [a + b for a, b in zip(list1, list2)]
@@ -74,37 +75,30 @@ class taxCalc:
 class netIncome:
 	def __init__(self, EBT, taxCalc):
 		self.Projection = listOp(EBT, Less(taxCalc) ,'+')
+
+class capEx:
+	def __init__(self, rev, margin): #interestRate needs to be a list in the end
+		self.Projection = listOp(rev, [margin]*len(rev) ,'*')
+
+class FCF:
+	def __init__(self, netincome, daa, capex, nwc):
+		
+		Plus = daa
 	
-#Assumptions ~ each of these will become a class
-
-purchaseMultiple = 5 #float
-
-debtToEquity = '60:40' #string
-interestRate = 10/100 #float ~ must be a percent
-
-revenueStart = 100#float and 000s indicator
-revenueGrowth = 10/100 #float ~ must be a percent
-
-EBITDAMargin = 40/100 #float ~ must be a percent
-
-depreciation = 20 #float and 000s indicator
-amortization = 0 #float and 000s indicator
-
-CAPEX = 15/100 #float ~ must be a percent of revenue
-
-WCGrowth = 5 #float and 000s indicator
-
-taxRate = 40/100 #float ~ must be a percent
-
-timeFrame = 5 + 1 #int years
-
-debtPaydownAtCompletion = True #boolean toggle
+		lessCapEx = Less(capex.Projection)
+		lessNWC = Less(nwc)
+		Lesses = listOp(lessCapEx, lessNWC, '+')
+		
+		adjustments = listOp(Plus, Lesses, '+')
+		
+		self.Projection = listOp(netincome, adjustments, '+') #will need some generalization work
 
 
-#computations
 
+#statements
 class incomeStatement:
 
+	kind = 'Income Statement'
 	def __init__(self,
 				 purchaseMultiple,
 				 debtToEquity,
@@ -158,14 +152,59 @@ class incomeStatement:
 					'Tax Expense':self.taxcalc.Projection,
 					'Next Income':self.netincome.Projection})
 		self.cleanIncomeStatement = self.incomeStatementRaw.T.round(2)
-		return 'Done'
 	
 	def getStatement(self):
 		self.calculate()
 		return self.cleanIncomeStatement
+
+class cashFlowStament:
+	
+	def __init__(self, 
+				 incomestatement,
+				 capexMargin,
+				 nwc ):
+				 
+		self.incomestatement = incomestatement
+		self.capexMargin = capexMargin
+		self.nwc = nwc
+	
+	def calculate(self): #needs some generalization work
+		self.netincome = self.incomestatement.netincome.Projection
+		self.daa = self.incomestatement.daa.Projection
+		self.capex =  capEx(self.incomestatement.revenue.Projection, self.capexMargin)#this will be changed and generalized
+		self.nwc = [self.nwc]*len(self.daa) #this will be changed and generalized
+		
+		self.fcf = FCF(self.netincome, self.daa, self.capex, self.nwc).Projection[:-1] #needs ssome generalization work
+		
+
+#Assumptions ~ each of these will become a class
+
+purchaseMultiple = 5 #float
+exitMultiple = 5 #float
+
+debtToEquity = '60:40' #string
+interestRate = 10/100 #float ~ must be a percent
+
+revenueStart = 100#float and 000s indicator
+revenueGrowth = 10/100 #float ~ must be a percent
+
+EBITDAMargin = 40/100 #float ~ must be a percent
+
+depreciation = 20 #float and 000s indicator
+amortization = 0 #float and 000s indicator
+
+CAPEX = 15/100 #float ~ must be a percent of revenue
+
+WCGrowth = 5 #float and 000s indicator
+
+taxRate = 40/100 #float ~ must be a percent
+
+timeFrame = 5 + 1 #int years
+
+debtPaydownAtCompletion = True #boolean toggle
 	
 
-var = incomeStatement(purchaseMultiple,
+IS = incomeStatement(purchaseMultiple,
 				 debtToEquity,
 				 interestRate,
 				 revenueStart,
@@ -175,4 +214,19 @@ var = incomeStatement(purchaseMultiple,
 				 amortization,
 				 taxRate,
 				 timeFrame)
+IS.calculate()
+
+
+CFS = cashFlowStament(IS, 
+					  CAPEX, 
+					  WCGrowth)
+CFS.calculate()
+
+cummulativeCashFlow = sum(CFS.fcf) #be careful about the length of fcf
+exitEBITDA = IS.ebitda.Projection[-1] #be careful with year, this is the "last year"
+TEV = exitMultiple * exitEBITDA
+netDebtAtExit = IS.debtRequired - cummulativeCashFlow
+EV = TEV - netDebtAtExit
+MOI = EV / IS.purchasePrice
+
 					
