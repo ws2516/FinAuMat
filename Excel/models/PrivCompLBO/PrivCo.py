@@ -105,36 +105,74 @@ debtPaydownAtCompletion = True #boolean toggle
 
 class incomeStatement:
 
-	def __init__(self):
+	def __init__(self,
+				 purchaseMultiple,
+				 debtToEquity,
+				 interestRate,
+				 revenueStart,
+				 revenueGrowth,
+				 EBITDAMargin,
+				 depreciation,
+				 amortization,
+				 taxRate,
+				 timeFrame
+				 ):
+		self.purchaseMultiple = purchaseMultiple
+		self.debtToEquity = debtToEquity
+		self.interestRate = interestRate
+		self.revenueStart = revenueStart
+		self.revenueGrowth = revenueGrowth
+		self.EBITDAMargin = EBITDAMargin
+		self.depreciation = depreciation
+		self.amortization = amortization
+		self.taxRate = taxRate
+		self.timeFrame = timeFrame
+	
+	def calculate(self):
+		self.EBITDAStart = self.revenueStart * self.EBITDAMargin
+		self.purchasePrice = self.purchaseMultiple * self.EBITDAStart
+		
+		self.debtRequired = (int(self.debtToEquity.split(':')[0])/100) * self.purchasePrice
+		self.equityRequired = (int(self.debtToEquity.split(':')[1])/100) * self.purchasePrice
+		
+		self.revenue = Revenue(self.revenueStart, self.revenueGrowth, self.timeFrame)
+		
+		self.ebitda = EBITDA(self.revenue.Projection, self.EBITDAMargin)
+		self.daa = DaA(self.depreciation, self.amortization, self.revenue.Projection)
+		
+		self.ebit = EBIT(self.ebitda.Projection, self.daa.Projection)
+		self.debtinterest = debtInterest(self.debtRequired, self.interestRate, self.revenue.Projection)
+		
+		self.ebt = EBT(self.ebit.Projection, self.debtinterest.Projection)
+		self.taxcalc = taxCalc(self.ebt.Projection, self.taxRate)
+		
+		self.netincome = netIncome(self.ebt.Projection, self.taxcalc.Projection)
+		
+		self.incomeStatementRaw = pd.DataFrame({ 
+					'Revenue':self.revenue.Projection,
+					'EBITDA':self.ebitda.Projection,
+					'D&A':self.daa.Projection,
+					'EBIT':self.ebit.Projection,
+					'Debt Interest':self.debtinterest.Projection,
+					'EBT':self.ebt.Projection,
+					'Tax Expense':self.taxcalc.Projection,
+					'Next Income':self.netincome.Projection})
+		self.cleanIncomeStatement = self.incomeStatementRaw.T.round(2)
+		return 'Done'
+	
+	def getStatement(self):
+		self.calculate()
+		return self.cleanIncomeStatement
+	
 
-EBITDAStart = revenueStart * EBITDAMargin
-purchasePrice = purchaseMultiple * EBITDAStart
-
-debtRequired = (int(debtToEquity.split(':')[0])/100) * purchasePrice
-equityRequired = (int(debtToEquity.split(':')[1])/100) * purchasePrice
-
-revenue = Revenue(revenueStart, revenueGrowth, timeFrame)
-
-ebitda = EBITDA(revenue.Projection, EBITDAMargin)
-daa = DaA(depreciation, amortization, revenue.Projection)
-
-ebit = EBIT(ebitda.Projection, daa.Projection)
-debtinterest = debtInterest(debtRequired, interestRate, revenue.Projection)
-
-ebt = EBT(ebit.Projection, debtinterest.Projection)
-taxcalc = taxCalc(ebt.Projection, taxRate)
-
-netincome = netIncome(ebt.Projection, taxcalc.Projection)
-
-incomeStatement = pd.DataFrame({ 
-					'Revenue':revenue.Projection,
-					'EBITDA':ebitda.Projection,
-					'D&A':daa.Projection,
-					'EBIT':ebit.Projection,
-					'Debt Interest':debtinterest.Projection,
-					'EBT':ebt.Projection,
-					'Tax Expense':taxcalc.Projection,
-					'Next Income':netincome.Projection})
-
-print(incomeStatement.T.round(2))
+var = incomeStatement(purchaseMultiple,
+				 debtToEquity,
+				 interestRate,
+				 revenueStart,
+				 revenueGrowth,
+				 EBITDAMargin,
+				 depreciation,
+				 amortization,
+				 taxRate,
+				 timeFrame)
 					
