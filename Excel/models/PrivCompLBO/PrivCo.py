@@ -23,6 +23,10 @@ LBO assumptions should be "standard" to a degree but we can build these out late
 '''
 
 import pandas as pd
+import math
+
+def IRR(MOI, years):
+	return MOI**(1/(years-1))
 
 def listOp(list1, list2, op):
 	if op == '+':
@@ -226,7 +230,9 @@ cummulativeCashFlow = sum(CFS.fcf) #be careful about the length of fcf
 exitEBITDA = IS.ebitda.Projection[-1] #be careful with year, this is the "last year"
 TEV = exitMultiple * exitEBITDA
 netDebtAtExit = IS.debtRequired - cummulativeCashFlow
-EV = TEV - netDebtAtExit
-MOI = EV / IS.purchasePrice
+ev = TEV - netDebtAtExit
+moi = EV / IS.equityRequired
+irr = IRR(MOI, timeFrame)
+
 
 					
