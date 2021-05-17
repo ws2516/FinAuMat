@@ -24,6 +24,7 @@ import pandas as pd
 import math
 import numpy as np
 
+
 def IRR(MOI, years):
 	return MOI**(1/(years-1))
 
@@ -46,7 +47,11 @@ def listOp(list1, list2, op):
 def Less(a):
 	return [-1*i for i in a]
 
-class Revenue:
+class projectionPass:
+	def __init__(self, list1, list2, op):
+		self.Projection = listOp(list1,list2, op)
+
+class Itemized:
 	
 	def __init__(self, initial, growthRate, lineItems, years):
 		for i in range(len(lineItems)):
@@ -118,9 +123,19 @@ class incomeStatement:
 				 purchaseMultiple,
 				 debtToEquity,
 				 interestRate,
+				 
 				 revenueStart,
 				 revenueLineItems,
 				 revenueGrowth,
+				 
+				 cogsStart,
+				 cogsLineItems,
+				 cogsGrowth,
+				 
+				 sgaStart,
+				 sgaLineItems,
+				 sgaGrowth,				 
+				 
 				 EBITDAMargin,
 				 depreciation,
 				 amortization,
@@ -130,9 +145,19 @@ class incomeStatement:
 		self.purchaseMultiple = purchaseMultiple
 		self.debtToEquity = debtToEquity
 		self.interestRate = interestRate
+		
 		self.revenueStart = revenueStart
 		self.revenueLineItems = revenueLineItems
 		self.revenueGrowth = revenueGrowth
+		
+		self.cogsStart = cogsStart
+		self.cogsLineItems = cogsLineItems
+		self.cogsGrowth = cogsGrowth
+		
+		self.sgaStart = sgaStart
+		self.sgaLineItems = sgaLineItems
+		self.sgaGrowth = sgaGrowth
+		
 		self.EBITDAMargin = EBITDAMargin
 		self.depreciation = depreciation
 		self.amortization = amortization
@@ -141,9 +166,15 @@ class incomeStatement:
 	
 	def calculate(self):
 		
-		self.revenue = Revenue(self.revenueStart, self.revenueGrowth, self.revenueLineItems, self.timeFrame)
+		self.revenue = Itemized(self.revenueStart, self.revenueGrowth, self.revenueLineItems, self.timeFrame)
+		self.cogs = Itemized(self.cogsStart, self.cogsGrowth, self.cogsLineItems, self.timeFrame)
+		self.grossprofit = projectionPass(self.revenue.Projection, Less(self.cogs.Projection), '+')
+		self.sga = Itemized(self.sgaStart, self.sgaGrowth, self.sgaLineItems, self.timeFrame)
+		self.ebitda = projectionPass(self.grossprofit.Projection, Less(self.sga.Projection),'+')
 		
+		print(self.ebitda.Projection)
 		self.EBITDAStart = self.revenue.Projection[0] * self.EBITDAMargin
+		
 		self.purchasePrice = self.purchaseMultiple * self.EBITDAStart
 		
 		self.debtRequired = (int(self.debtToEquity.split(':')[0])/100) * self.purchasePrice
@@ -207,13 +238,13 @@ revenueStart = [50,50]#float and 000s indicator
 revenueLineItems = ['Hello', 'World']
 revenueGrowth = [10/100, 10/100] #float ~ must be a percent
 
-COGSStart = [50,50]#float and 000s indicator
-COGSLineItems = ['Hello', 'World']
-COGSGrowth = [10/100, 10/100] #float ~ must be a percent
+cogsStart = [10,10]#float and 000s indicator
+cogsLineItems = ['Hello', 'World']
+cogsGrowth = [10/100, 10/100] #float ~ must be a percent
 
-SGAStart = [50,50]#float and 000s indicator
-SGALineItems = ['Hello', 'World']
-SGAGrowth = [10/100, 10/100] #float ~ must be a percent
+sgaStart = [10,10]#float and 000s indicator
+sgaLineItems = ['Hello', 'World']
+sgaGrowth = [10/100, 10/100] #float ~ must be a percent
 
 #use this as a check
 EBITDAMargin = 40/100 #float ~ must be a percent
@@ -237,6 +268,15 @@ IS = incomeStatement(purchaseMultiple,
 				 revenueStart,
 				 revenueLineItems,
 				 revenueGrowth,
+				 
+				 cogsStart,
+				 cogsLineItems,
+				 cogsGrowth,
+				 
+				 sgaStart,
+				 sgaLineItems,
+				 sgaGrowth,
+				 
 				 EBITDAMargin,
 				 depreciation,
 				 amortization,
