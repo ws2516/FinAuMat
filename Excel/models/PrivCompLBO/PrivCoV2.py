@@ -109,6 +109,21 @@ class FCF:
 		
 		self.Projection = listOp(netincome, adjustments, '+') #will need some generalization work
 
+class totalDebt:
+
+	def __init__(self, leverageSource, leverageMultiple, years, startingEBITDA):
+		for i in range(len(leverageSource)):
+			setattr(self, leverageSource[i].upper()+'DEBT', leverageMultiple[i]*startingEBITDA) #we use upper so we have to keep this for now
+		self.TotalLeverage = self.sumAll() #listOp(self.all()[0],self.all()[1], '+')
+	
+	
+	def sumAll(cls): # I dont like this but it works
+		returnAll = [value for name, value in vars(cls).items() if name.isupper()]
+		sums = 0
+		for i in returnAll:
+			sums += i
+		return sums
+		
 class valuationTable:
 	
 	def __init__(self, IS, debt, cash):
@@ -262,19 +277,17 @@ managementRollover = 50/100 #float ~ must be a percent
 debtToEquity = '60:40' #string
 interestRate = 10/100 #float ~ must be a percent
 
-revenueStart = [50,50] #list 000s indicator
-revenueLineItems = ['Hello', 'World'] #strings name of lineitem
+revenueStart = [10,10] #list 000s indicator
+revenueLineItems = ['TShirt', 'Pants'] #strings name of lineitem
 revenueGrowth = [10/100, 10/100] #list must be a percent
 
-cogsStart = [10,10]#float and 000s indicator
-cogsLineItems = ['Hello', 'World'] #strings name of lineitem
-cogsGrowth = [10/100, 10/100] #list must be a percent
+cogsStart = [4.5,4.5]#float and 000s indicator
+cogsLineItems = ['Fake', 'Cogs'] #strings name of lineitem
+cogsGrowth = [9/100, 9/100] #list must be a percent
 
-sgaStart = [10,10]#list 000s indicator
-sgaLineItems = ['Hello', 'World'] #strings name of lineitem
-sgaGrowth = [10/100, 10/100] #list must be a percent
-
-
+sgaStart = [1.8,1.1]#list 000s indicator
+sgaLineItems = ['GA', 'Sales'] #strings name of lineitem
+sgaGrowth = [5/100, 5.5/100] #list must be a percent
 
 depreciation = 20 #float and 000s indicator
 amortization = 0 #float and 000s indicator
@@ -287,9 +300,8 @@ taxRate = 40/100 #float ~ must be a percent
 
 timeFrame = 5 + 1 #int years
 
-
 debtPaydownAtCompletion = True #boolean toggle
-	
+
 IS = incomeStatement(purchaseMultiple,
 				 debtToEquity,
 				 interestRate,
@@ -319,7 +331,7 @@ CFS = cashFlowStament(IS,
 CFS.calculate()
 
 
-print(sourcesAndUses(valuation).transactionValue)
+print(print(totalDebt(['bank','sub','PIK'],[3,2,2],7, IS.EBITDAStart ).TotalLeverage))
 
 
 cummulativeCashFlow = sum(CFS.fcf) #be careful about the length of fcf
