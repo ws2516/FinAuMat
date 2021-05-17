@@ -50,19 +50,18 @@ class Revenue:
 	
 	def __init__(self, initial, growthRate, lineItems, years):
 		for i in range(len(lineItems)):
-			setattr(self, lineItems[i].upper()+'PROJECTION', self.project(initial[i],growthRate[i], years))
-		self.Projection = self.all() #listOp(self.all()[0],self.all()[1], '+')
+			setattr(self, lineItems[i].upper()+'PROJECTION', self.project(initial[i],growthRate[i], years)) #we use upper so we have to keep this for now
+		self.Projection = self.sumAll() #listOp(self.all()[0],self.all()[1], '+')
 	
 	def project(self, initial, growthRate, years):
 		return [initial * (1+growthRate)**i for i in range(0,years)]
 	
-	def all(cls):
+	def sumAll(cls): # I dont like this but it works
 		returnAll = [value for name, value in vars(cls).items() if name.isupper()]
 		sums = np.zeros(len(returnAll[0]))
 		for i in returnAll:
 			sums += i
 		return sums
-			
 
 class EBITDA:
 	def __init__(self, rev, margin): #margin needs to be a list in the end
@@ -120,6 +119,7 @@ class incomeStatement:
 				 debtToEquity,
 				 interestRate,
 				 revenueStart,
+				 revenueLineItems,
 				 revenueGrowth,
 				 EBITDAMargin,
 				 depreciation,
@@ -131,6 +131,7 @@ class incomeStatement:
 		self.debtToEquity = debtToEquity
 		self.interestRate = interestRate
 		self.revenueStart = revenueStart
+		self.revenueLineItems = revenueLineItems
 		self.revenueGrowth = revenueGrowth
 		self.EBITDAMargin = EBITDAMargin
 		self.depreciation = depreciation
@@ -139,13 +140,14 @@ class incomeStatement:
 		self.timeFrame = timeFrame
 	
 	def calculate(self):
-		self.EBITDAStart = self.revenueStart * self.EBITDAMargin
+		
+		self.revenue = Revenue(self.revenueStart, self.revenueGrowth, self.revenueLineItems, self.timeFrame)
+		
+		self.EBITDAStart = self.revenue.Projection[0] * self.EBITDAMargin
 		self.purchasePrice = self.purchaseMultiple * self.EBITDAStart
 		
 		self.debtRequired = (int(self.debtToEquity.split(':')[0])/100) * self.purchasePrice
 		self.equityRequired = (int(self.debtToEquity.split(':')[1])/100) * self.purchasePrice
-		
-		self.revenue = Revenue(self.revenueStart, self.revenueGrowth, self.timeFrame)
 		
 		self.ebitda = EBITDA(self.revenue.Projection, self.EBITDAMargin)
 		self.daa = DaA(self.depreciation, self.amortization, self.revenue.Projection)
@@ -201,10 +203,19 @@ exitMultiple = 5 #float
 debtToEquity = '60:40' #string
 interestRate = 10/100 #float ~ must be a percent
 
-revenueStart = [100,100]#float and 000s indicator
+revenueStart = [50,50]#float and 000s indicator
 revenueLineItems = ['Hello', 'World']
 revenueGrowth = [10/100, 10/100] #float ~ must be a percent
 
+COGSStart = [50,50]#float and 000s indicator
+COGSLineItems = ['Hello', 'World']
+COGSGrowth = [10/100, 10/100] #float ~ must be a percent
+
+SGAStart = [50,50]#float and 000s indicator
+SGALineItems = ['Hello', 'World']
+SGAGrowth = [10/100, 10/100] #float ~ must be a percent
+
+#use this as a check
 EBITDAMargin = 40/100 #float ~ must be a percent
 
 depreciation = 20 #float and 000s indicator
@@ -219,14 +230,12 @@ taxRate = 40/100 #float ~ must be a percent
 timeFrame = 5 + 1 #int years
 
 debtPaydownAtCompletion = True #boolean toggle
-
-print(Revenue(revenueStart, revenueGrowth, revenueLineItems, timeFrame).Projection)
 	
-'''
 IS = incomeStatement(purchaseMultiple,
 				 debtToEquity,
 				 interestRate,
 				 revenueStart,
+				 revenueLineItems,
 				 revenueGrowth,
 				 EBITDAMargin,
 				 depreciation,
@@ -246,8 +255,10 @@ exitEBITDA = IS.ebitda.Projection[-1] #be careful with year, this is the "last y
 TEV = exitMultiple * exitEBITDA
 netDebtAtExit = IS.debtRequired - cummulativeCashFlow
 ev = TEV - netDebtAtExit
-moi = EV / IS.equityRequired
-irr = IRR(MOI, timeFrame)
-'''
+moi = ev / IS.equityRequired
+irr = IRR(moi, timeFrame)
+
+print(vars(IS))
+
 
 					
