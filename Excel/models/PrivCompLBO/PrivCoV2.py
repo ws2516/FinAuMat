@@ -68,10 +68,6 @@ class Itemized:
 			sums += i
 		return sums
 
-class EBITDA:
-	def __init__(self, rev, margin): #margin needs to be a list in the end
-		self.Projection = listOp(rev,[margin]*len(rev),'*')
-
 class DaA:
 	def __init__(self, depr, amort, rev): #these need to be lists in the end
 		self.Projection = [depr + amort]*len(rev)
@@ -167,12 +163,13 @@ class incomeStatement:
 	def calculate(self):
 		
 		self.revenue = Itemized(self.revenueStart, self.revenueGrowth, self.revenueLineItems, self.timeFrame)
+		
 		self.cogs = Itemized(self.cogsStart, self.cogsGrowth, self.cogsLineItems, self.timeFrame)
 		self.grossprofit = projectionPass(self.revenue.Projection, Less(self.cogs.Projection), '+')
+		
 		self.sga = Itemized(self.sgaStart, self.sgaGrowth, self.sgaLineItems, self.timeFrame)
 		self.ebitda = projectionPass(self.grossprofit.Projection, Less(self.sga.Projection),'+')
-		
-		print(self.ebitda.Projection)
+
 		self.EBITDAStart = self.revenue.Projection[0] * self.EBITDAMargin
 		
 		self.purchasePrice = self.purchaseMultiple * self.EBITDAStart
@@ -180,7 +177,6 @@ class incomeStatement:
 		self.debtRequired = (int(self.debtToEquity.split(':')[0])/100) * self.purchasePrice
 		self.equityRequired = (int(self.debtToEquity.split(':')[1])/100) * self.purchasePrice
 		
-		self.ebitda = EBITDA(self.revenue.Projection, self.EBITDAMargin)
 		self.daa = DaA(self.depreciation, self.amortization, self.revenue.Projection)
 		
 		self.ebit = EBIT(self.ebitda.Projection, self.daa.Projection)
@@ -191,8 +187,12 @@ class incomeStatement:
 		
 		self.netincome = netIncome(self.ebt.Projection, self.taxcalc.Projection)
 		
+		#automate this
 		self.incomeStatementRaw = pd.DataFrame({ 
 					'Revenue':self.revenue.Projection,
+					'COGS':self.cogs.Projection,
+					'Gross Profit':self.grossprofit.Projection,
+					'SGA':self.sga.Projection,
 					'EBITDA':self.ebitda.Projection,
 					'D&A':self.daa.Projection,
 					'EBIT':self.ebit.Projection,
@@ -259,6 +259,7 @@ WCGrowth = 5 #float and 000s indicator
 taxRate = 40/100 #float ~ must be a percent
 
 timeFrame = 5 + 1 #int years
+
 
 debtPaydownAtCompletion = True #boolean toggle
 	
