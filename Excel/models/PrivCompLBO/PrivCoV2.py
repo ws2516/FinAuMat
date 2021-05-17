@@ -51,7 +51,7 @@ class projectionPass:
 	def __init__(self, list1, list2, op):
 		self.Projection = listOp(list1,list2, op)
 
-class Itemized:
+class itemized:
 	
 	def __init__(self, initial, growthRate, lineItems, years):
 		for i in range(len(lineItems)):
@@ -109,6 +109,19 @@ class FCF:
 		
 		self.Projection = listOp(netincome, adjustments, '+') #will need some generalization work
 
+class valuationTable:
+	
+	def __init__(self, IS, debt, cash):
+		self.transactionValue = IS.purchasePrice
+		
+		self.debt = Less(debt)[0] #will need to come from BS
+		self.cash = cash[0] #will need to come from BS
+		
+		self.offerValue = self.transactionValue + self.debt + self.cash
+		
+		
+
+
 
 
 #statements
@@ -132,7 +145,6 @@ class incomeStatement:
 				 sgaLineItems,
 				 sgaGrowth,				 
 				 
-				 EBITDAMargin,
 				 depreciation,
 				 amortization,
 				 taxRate,
@@ -153,8 +165,7 @@ class incomeStatement:
 		self.sgaStart = sgaStart
 		self.sgaLineItems = sgaLineItems
 		self.sgaGrowth = sgaGrowth
-		
-		self.EBITDAMargin = EBITDAMargin
+
 		self.depreciation = depreciation
 		self.amortization = amortization
 		self.taxRate = taxRate
@@ -162,15 +173,15 @@ class incomeStatement:
 	
 	def calculate(self):
 		
-		self.revenue = Itemized(self.revenueStart, self.revenueGrowth, self.revenueLineItems, self.timeFrame)
+		self.revenue = itemized(self.revenueStart, self.revenueGrowth, self.revenueLineItems, self.timeFrame)
 		
-		self.cogs = Itemized(self.cogsStart, self.cogsGrowth, self.cogsLineItems, self.timeFrame)
+		self.cogs = itemized(self.cogsStart, self.cogsGrowth, self.cogsLineItems, self.timeFrame)
 		self.grossprofit = projectionPass(self.revenue.Projection, Less(self.cogs.Projection), '+')
 		
-		self.sga = Itemized(self.sgaStart, self.sgaGrowth, self.sgaLineItems, self.timeFrame)
+		self.sga = itemized(self.sgaStart, self.sgaGrowth, self.sgaLineItems, self.timeFrame)
 		self.ebitda = projectionPass(self.grossprofit.Projection, Less(self.sga.Projection),'+')
 
-		self.EBITDAStart = self.revenue.Projection[0] * self.EBITDAMargin
+		self.EBITDAStart = self.ebitda.Projection[0]
 		
 		self.purchasePrice = self.purchaseMultiple * self.EBITDAStart
 		
@@ -224,30 +235,46 @@ class cashFlowStament:
 		self.nwc = [self.nwc]*len(self.daa) #this will be changed and generalized
 		
 		self.fcf = FCF(self.netincome, self.daa, self.capex, self.nwc).Projection[:-1] #needs ssome generalization work
+
+class sourcesAndUses:
+	
+	def __init__(self, valuation):
 		
+		self.transactionValue = valuation.offerValue
+		print(self.transactionValue)	
 
 #Assumptions ~ each of these will become a class
 
 purchaseMultiple = 5 #float
 exitMultiple = 5 #float
 
+#Extraneous Transaction Costs
+startingDebt = [0] #this will be in the BS - a placeholder
+startingCash = [0] #this will be in the BS - a placeholder
+revolverExists = True #boolean to be a revolver
+revolverEBITDAMult = 3 #float and x indicator
+revolverAvailability = 90977 #float and 000s indicator
+minCash = 5 #float and 000s indicator
+MaAFee = 1.5 #float and 000s indicator
+existingManagementEquity = 10/100 #float ~ must be a percent
+managementRollover = 50/100 #float ~ must be a percent
+
 debtToEquity = '60:40' #string
 interestRate = 10/100 #float ~ must be a percent
 
-revenueStart = [50,50]#float and 000s indicator
-revenueLineItems = ['Hello', 'World']
-revenueGrowth = [10/100, 10/100] #float ~ must be a percent
+revenueStart = [50,50] #list 000s indicator
+revenueLineItems = ['Hello', 'World'] #strings name of lineitem
+revenueGrowth = [10/100, 10/100] #list must be a percent
 
 cogsStart = [10,10]#float and 000s indicator
-cogsLineItems = ['Hello', 'World']
-cogsGrowth = [10/100, 10/100] #float ~ must be a percent
+cogsLineItems = ['Hello', 'World'] #strings name of lineitem
+cogsGrowth = [10/100, 10/100] #list must be a percent
 
-sgaStart = [10,10]#float and 000s indicator
-sgaLineItems = ['Hello', 'World']
-sgaGrowth = [10/100, 10/100] #float ~ must be a percent
+sgaStart = [10,10]#list 000s indicator
+sgaLineItems = ['Hello', 'World'] #strings name of lineitem
+sgaGrowth = [10/100, 10/100] #list must be a percent
 
-#use this as a check
-EBITDAMargin = 40/100 #float ~ must be a percent
+
 
 depreciation = 20 #float and 000s indicator
 amortization = 0 #float and 000s indicator
@@ -278,18 +305,22 @@ IS = incomeStatement(purchaseMultiple,
 				 sgaLineItems,
 				 sgaGrowth,
 				 
-				 EBITDAMargin,
 				 depreciation,
 				 amortization,
 				 taxRate,
 				 timeFrame)
 IS.calculate()
 
+valuation = valuationTable(IS, startingDebt, startingCash)
 
 CFS = cashFlowStament(IS, 
 					  CAPEX, 
 					  WCGrowth)
 CFS.calculate()
+
+
+print(sourcesAndUses(valuation).transactionValue)
+
 
 cummulativeCashFlow = sum(CFS.fcf) #be careful about the length of fcf
 exitEBITDA = IS.ebitda.Projection[-1] #be careful with year, this is the "last year"
@@ -298,8 +329,6 @@ netDebtAtExit = IS.debtRequired - cummulativeCashFlow
 ev = TEV - netDebtAtExit
 moi = ev / IS.equityRequired
 irr = IRR(moi, timeFrame)
-
-print(vars(IS))
 
 
 					
