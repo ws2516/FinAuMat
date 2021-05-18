@@ -114,7 +114,7 @@ class totalDebt:
 	def __init__(self, leverageSource, leverageMultiple, leverageFees, years, startingEBITDA):
 		for i in range(len(leverageSource)):
 			setattr(self, leverageSource[i].upper()+'DEBT', leverageMultiple[i]*startingEBITDA) #we use upper so we have to keep this for now
-			setattr(self, leverageSource[i].lower()+'debtfeesperyear', leverageFees[i]*leverageMultiple[i]*startingEBITDA/years)
+			setattr(self, leverageSource[i].lower()+'debtfees', leverageFees[i]*leverageMultiple[i]*startingEBITDA)
 		self.TotalLeverage = self.sumAllTotals() #listOp(self.all()[0],self.all()[1], '+')
 		self.TotalLeverageFees = self.sumAllFees()
 	
@@ -144,27 +144,24 @@ class valuationTable:
 		
 class Uses:
 	
-	def __init__(self, purchase, existingDebt, financingFees, transactionCosts):
-		self.purchase = purchase
-		self.existingDebt = existingDebt
-		self.financingFees = financingFees
+	def __init__(self, IS, existingDebt, totalDebt, transactionCosts):
+		self.purchaseEquity = IS.purchasePrice
+		self.refinanceExistingDebt = existingDebt
+		self.financingFees = totalDebt.TotalLeverageFees
 		self.transactionCosts = transactionCosts
-		self.totalUses = purchase + existingDebt + financingFees + transactionCosts
+		self.totalUses = self.purchaseEquity + self.refinanceExistingDebt + self.financingFees + self.transactionCosts
 
 class Sources:
 	
-	def __init__(self, totalDebt, cashOnHand, sponsorEquity, uses):
-		debtNames = [name for name, value in vars(totalDebt).items() if name.islower()]
-		debtValues = [value for name, value in vars(totalDebt).items() if name.islower()]
+	def __init__(self, totalDebt, cashOnHand, uses):
+		debtNames = [name for name, value in vars(totalDebt).items() if name.isupper()]
+		debtValues = [value for name, value in vars(totalDebt).items() if name.isupper()]
 		for i in range(len(debtNames)):
 			setattr(self, debtNames[i], debtValues[i])
 		self.totalSources = uses.totalUses
 		self.cashOnHand = cashOnHand
 		self.sponsorEquity = self.totalSources - np.sum(debtValues) - self.cashOnHand
 		
-		
-
-
 #statements
 class incomeStatement:
 
@@ -277,17 +274,37 @@ class cashFlowStament:
 		
 		self.fcf = FCF(self.netincome, self.daa, self.capex, self.nwc).Projection[:-1] #needs ssome generalization work
 
-class sourcesAndUses:
+class SUs:
+	def __init__(self,
+				debtTypes,
+				debtLeverage,
+				debtInterestFees,
+				timeFrame,
+				IS,
+				refinancingExistingDebt,
+				transactionFees,
+				cashOnHand):
+		self.debtTypes = debtTypes
+		self.debtLeverage = debtLeverage
+		self.debtInterestFees = debtInterestFees
+		self.timeFrame = timeFrame + 1
+		self.IS = IS
+		self.refinancingExistingDebt = refinancingExistingDebt
+		self.transactionFees = transactionFees
+		self.cashOnHand = cashOnHand
+		self.TotalDebt = totalDebt(self.debtTypes, self.debtLeverage, self.debtInterestFees, self.timeFrame, self.IS.EBITDAStart)
+		self.Use = Uses(self.IS, self.refinancingExistingDebt , self.TotalDebt, self.transactionFees) #refinancingExistingDebt , transactionFees
+		self.Source = Sources(self.TotalDebt, self.cashOnHand, self.Use)
 	
-	def __init__(self, valuation):
+	def calculate(self):
+		self.TotalDebt = totalDebt(self.debtTypes, self.debtLeverage, self.debtInterestFees, self.timeFrame, self.IS.EBITDAStart)
+		self.Use = Uses(self.IS, self.refinancingExistingDebt , self.TotalDebt, self.transactionFees) #refinancingExistingDebt , transactionFees
+		self.Source = Sources(self.TotalDebt, self.cashOnHand, self.Use)
 		
-		self.transactionValue = valuation.offerValue
-		print(self.transactionValue)	
-
 #Assumptions ~ each of these will become a class
 
-purchaseMultiple = 5 #float
-exitMultiple = 5 #float
+purchaseMultiple = 10 #float
+exitMultiple = 10 #float
 
 #Extraneous Transaction Costs
 startingDebt = [0] #this will be in the BS - a placeholder
@@ -303,6 +320,9 @@ managementRollover = 50/100 #float ~ must be a percent
 debtTypes = ['bank','sub','PIK']
 debtLeverage = [3,2,2]
 debtInterestFees = [2/100,3/100,3/100]
+refinancingExistingDebt = 11.1
+transactionFees = 0
+cashOnHand = 0
 
 debtToEquity = '60:40' # NEEDS TO TAKE INTO ACCOUNT MANAGEMENT ROLLOVER
 
@@ -320,8 +340,8 @@ sgaStart = [1.8,1.1]#list 000s indicator
 sgaLineItems = ['GA', 'Sales'] #strings name of lineitem
 sgaGrowth = [5/100, 5.5/100] #list must be a percent
 
-depreciation = 20 #float and 000s indicator
-amortization = 0 #float and 000s indicator
+depreciation = 1 #float and 000s indicator
+amortization = 0.012 #float and 000s indicator
 
 CAPEX = 15/100 #float ~ must be a percent of revenue
 
@@ -361,9 +381,18 @@ CFS = cashFlowStament(IS,
 					  WCGrowth)
 CFS.calculate()
 
+SUs = SUs(debtTypes,
+		  debtLeverage,
+		  debtInterestFees,
+		  
+		  timeFrame,
+		  IS,
+		  
+		  refinancingExistingDebt,
+		  transactionFees,
+		  cashOnHand)
 
-Uses(purchase, existingDebt, financingFees, transactionCosts))
-print(Sources(totalDebt(debtTypes, debtLeverage, debtInterestFees, timeFrame+1, IS.EBITDAStart),0,Uses()))
+print(vars(SUs.Source))
 
 
 cummulativeCashFlow = sum(CFS.fcf) #be careful about the length of fcf
