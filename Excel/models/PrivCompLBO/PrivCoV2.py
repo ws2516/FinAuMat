@@ -111,14 +111,22 @@ class FCF:
 
 class totalDebt:
 
-	def __init__(self, leverageSource, leverageMultiple, years, startingEBITDA):
+	def __init__(self, leverageSource, leverageMultiple, leverageFees, years, startingEBITDA):
 		for i in range(len(leverageSource)):
 			setattr(self, leverageSource[i].upper()+'DEBT', leverageMultiple[i]*startingEBITDA) #we use upper so we have to keep this for now
-		self.TotalLeverage = self.sumAll() #listOp(self.all()[0],self.all()[1], '+')
+			setattr(self, leverageSource[i].lower()+'debtfeesperyear', leverageFees[i]*leverageMultiple[i]*startingEBITDA/years)
+		self.TotalLeverage = self.sumAllTotals() #listOp(self.all()[0],self.all()[1], '+')
+		self.TotalLeverageFees = self.sumAllFees()
 	
-	
-	def sumAll(cls): # I dont like this but it works
+	def sumAllTotals(cls): # I dont like this but it works
 		returnAll = [value for name, value in vars(cls).items() if name.isupper()]
+		sums = 0
+		for i in returnAll:
+			sums += i
+		return sums
+	
+	def sumAllFees(cls): # I dont like this but it works
+		returnAll = [value for name, value in vars(cls).items() if name.islower()]
 		sums = 0
 		for i in returnAll:
 			sums += i
@@ -134,9 +142,27 @@ class valuationTable:
 		
 		self.offerValue = self.transactionValue + self.debt + self.cash
 		
+class Uses:
+	
+	def __init__(self, purchase, existingDebt, financingFees, transactionCosts):
+		self.purchase = purchase
+		self.existingDebt = existingDebt
+		self.financingFees = financingFees
+		self.transactionCosts = transactionCosts
+		self.totalUses = purchase + existingDebt + financingFees + transactionCosts
+
+class Sources:
+	
+	def __init__(self, totalDebt, cashOnHand, sponsorEquity, uses):
+		debtNames = [name for name, value in vars(totalDebt).items() if name.islower()]
+		debtValues = [value for name, value in vars(totalDebt).items() if name.islower()]
+		for i in range(len(debtNames)):
+			setattr(self, debtNames[i], debtValues[i])
+		self.totalSources = uses.totalUses
+		self.cashOnHand = cashOnHand
+		self.sponsorEquity = self.totalSources - np.sum(debtValues) - self.cashOnHand
 		
-
-
+		
 
 
 #statements
@@ -274,7 +300,12 @@ MaAFee = 1.5 #float and 000s indicator
 existingManagementEquity = 10/100 #float ~ must be a percent
 managementRollover = 50/100 #float ~ must be a percent
 
-debtToEquity = '60:40' #string
+debtTypes = ['bank','sub','PIK']
+debtLeverage = [3,2,2]
+debtInterestFees = [2/100,3/100,3/100]
+
+debtToEquity = '60:40' # NEEDS TO TAKE INTO ACCOUNT MANAGEMENT ROLLOVER
+
 interestRate = 10/100 #float ~ must be a percent
 
 revenueStart = [10,10] #list 000s indicator
@@ -331,7 +362,8 @@ CFS = cashFlowStament(IS,
 CFS.calculate()
 
 
-print(print(totalDebt(['bank','sub','PIK'],[3,2,2],7, IS.EBITDAStart ).TotalLeverage))
+Uses(purchase, existingDebt, financingFees, transactionCosts))
+print(Sources(totalDebt(debtTypes, debtLeverage, debtInterestFees, timeFrame+1, IS.EBITDAStart),0,Uses()))
 
 
 cummulativeCashFlow = sum(CFS.fcf) #be careful about the length of fcf
