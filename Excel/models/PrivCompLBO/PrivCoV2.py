@@ -63,7 +63,7 @@ class itemized:
 		sums = np.zeros(len(returnAll[0]))
 		for i in returnAll:
 			sums += i
-		return sums
+		return sums #fix this in v3, use varied delimiters for different tasks, it will be clever
 
 class DaA:
 	def __init__(self, depr, amort, rev): #these need to be lists in the end
@@ -318,9 +318,9 @@ class balanceSheet:
 			classDict = vars(self)
 			for named in classDict:
 				splits = named.split('_')
-				if (len(splits) == 2 and splits[1] == 'Liability'):
+				if (len(splits) >= 2 and splits[-1] == 'Liability'):
 					liabilityTotal += classDict[str(named)]
-				elif (len(splits) == 2 and splits[1] == 'Asset'):
+				elif (len(splits) >= 2 and splits[-1] == 'Asset'):
 					assetTotal += classDict[str(named)]
 				else:
 					continue
@@ -328,6 +328,7 @@ class balanceSheet:
 			self.total_Assets = assetTotal
 			self.total_Liabilities = liabilityTotal
 			
+			#think about how we can show "accounts receviable/payable etc"
 			
 		else:
 			print('You have made a mistake - Fix your inputs')
@@ -373,6 +374,13 @@ sgaGrowth = [5/100, 5.5/100] #list must be a percent
 
 depreciation = 1 #float and 000s indicator
 amortization = 0.012 #float and 000s indicator
+
+
+assetTypes = ['Cash_and_Equivalents','Accounts_Recievable','PPE']
+assetValues = [1,2,3]
+liabilityTypes = ['Accounts_Payable','Accured_Expenses_and_Liabilities','Debt']
+liabilityValues = [3,2,1]
+shareholdersEquity = 0
 
 CAPEX = 15/100 #float ~ must be a percent of revenue
 
@@ -423,6 +431,12 @@ SUs = SUs(debtTypes,
 		  transactionFees,
 		  cashOnHand)
 
+BS = balanceSheet(assetTypes, assetValues, liabilityTypes, liabilityValues, shareholdersEquity)
+
+BS.calculate()
+
+print(vars(BS))
+
 #returns
 cummulativeCashFlow = sum(CFS.fcf) #be careful about the length of fcf
 exitEBITDA = IS.ebitda.Projection[-1] #be careful with year, this is the "last year"
@@ -432,8 +446,5 @@ ev = TEV - netDebtAtExit
 moi = ev / IS.equityRequired
 irr = IRR(moi, timeFrame)
 
-bs = balanceSheet(['A','B'],[31,1],['A','B'],[1,2],0)
-bs.calculate()
-print(vars(bs))
 
 					
