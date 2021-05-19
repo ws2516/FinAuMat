@@ -5,8 +5,6 @@ Getting a bit more complex with: http://www.streetofwalls.com/finance-training-c
 Here the focus will be on sources and uses and debt schedule as well as building out a 
 clear integrated financial statement system
 
-	Income 
-		Line Items
 	Balance
 		Line Items
 	Cash
@@ -23,7 +21,6 @@ use a checkbox to define which items are to be counted in the Balance sheet, thi
 import pandas as pd
 import math
 import numpy as np
-
 
 def IRR(MOI, years):
 	return MOI**(1/(years-1))
@@ -162,6 +159,7 @@ class Sources:
 		self.cashOnHand = cashOnHand
 		self.sponsorEquity = self.totalSources - np.sum(debtValues) - self.cashOnHand
 		
+
 #statements
 class incomeStatement:
 
@@ -295,11 +293,44 @@ class SUs:
 		self.TotalDebt = totalDebt(self.debtTypes, self.debtLeverage, self.debtInterestFees, self.timeFrame, self.IS.EBITDAStart)
 		self.Use = Uses(self.IS, self.refinancingExistingDebt , self.TotalDebt, self.transactionFees) #refinancingExistingDebt , transactionFees
 		self.Source = Sources(self.TotalDebt, self.cashOnHand, self.Use)
+
+class balanceSheet:
+
+	def __init__(self, assetTypes, assetValues, liabilityTypes, liabilityValues, shareholdersEquity):
+		self.assetTypes = assetTypes
+		self.assetValues = assetValues
+		self.liabilityTypes = liabilityTypes
+		self.liabilityValues = liabilityValues
+		self.shareholders_Equity = shareholdersEquity
+		if (sum(self.assetValues) - sum(self.liabilityValues) == self.shareholders_Equity):
+			self.checked = True
+		else:
+			self.checked = False
 	
 	def calculate(self):
-		self.TotalDebt = totalDebt(self.debtTypes, self.debtLeverage, self.debtInterestFees, self.timeFrame, self.IS.EBITDAStart)
-		self.Use = Uses(self.IS, self.refinancingExistingDebt , self.TotalDebt, self.transactionFees) #refinancingExistingDebt , transactionFees
-		self.Source = Sources(self.TotalDebt, self.cashOnHand, self.Use)
+		if self.checked:
+			for i in range(len(self.assetTypes)):
+				setattr(self, self.assetTypes[i]+'_Asset', self.assetValues[i])
+			for i in range(len(self.liabilityTypes)):
+				setattr(self, self.liabilityTypes[i]+'_Liability', self.liabilityValues[i])
+			
+			assetTotal, liabilityTotal = 0, 0
+			classDict = vars(self)
+			for named in classDict:
+				splits = named.split('_')
+				if (len(splits) == 2 and splits[1] == 'Liability'):
+					liabilityTotal += classDict[str(named)]
+				elif (len(splits) == 2 and splits[1] == 'Asset'):
+					assetTotal += classDict[str(named)]
+				else:
+					continue
+			
+			self.total_Assets = assetTotal
+			self.total_Liabilities = liabilityTotal
+			
+			
+		else:
+			print('You have made a mistake - Fix your inputs')
 		
 #Assumptions ~ each of these will become a class
 
@@ -392,9 +423,7 @@ SUs = SUs(debtTypes,
 		  transactionFees,
 		  cashOnHand)
 
-print(vars(SUs.Source))
-
-
+#returns
 cummulativeCashFlow = sum(CFS.fcf) #be careful about the length of fcf
 exitEBITDA = IS.ebitda.Projection[-1] #be careful with year, this is the "last year"
 TEV = exitMultiple * exitEBITDA
@@ -403,5 +432,8 @@ ev = TEV - netDebtAtExit
 moi = ev / IS.equityRequired
 irr = IRR(moi, timeFrame)
 
+bs = balanceSheet(['A','B'],[31,1],['A','B'],[1,2],0)
+bs.calculate()
+print(vars(bs))
 
 					
