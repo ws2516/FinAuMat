@@ -5,19 +5,19 @@ Starting simple with: http://www.streetofwalls.com/finance-training-courses/priv
 To be determined: Class / Function Structure
 Can this be done start to finish
 
-This is the LBO CLass - 
+This is the LBO CLass -
 
 Structure:
 
 LBO
-	Income 
+	Income
 		Line Items
 	Balance
 		Line Items
 	Cash
 		Line Items
 
-The idea is that the final line items should always interact in the same way and the 
+The idea is that the final line items should always interact in the same way and the
 LBO assumptions should be "standard" to a degree but we can build these out later
 
 '''
@@ -32,15 +32,15 @@ def listOp(list1, list2, op):
 	if op == '+':
 		sum_list = [a + b for a, b in zip(list1, list2)]
 		return sum_list
-	
+
 	elif op == '*':
 		prod_list = [a * b for a, b in zip(list1, list2)]
 		return prod_list
-	
+
 	elif op == '/':
 		div_list = [a / b for a, b in zip(list1, list2)]
 		return div_list
-	
+
 	else:
 		print('Check your function definition.')
 
@@ -48,7 +48,7 @@ def Less(a):
 	return [-1*i for i in a]
 
 class Revenue:
-	
+
 	def __init__(self, initial, growthRate, years):
 		self.Projection = [initial * (1+growthRate)**i for i in range(0,years)]
 
@@ -59,7 +59,7 @@ class EBITDA:
 class DaA:
 	def __init__(self, depr, amort, rev): #these need to be lists in the end
 		self.Projection = [depr + amort]*len(rev)
-	
+
 class EBIT:
 	def __init__(self, EBITDA, DaA):
 		self.Projection = listOp(EBITDA, Less(DaA) ,'+')
@@ -86,15 +86,15 @@ class capEx:
 
 class FCF:
 	def __init__(self, netincome, daa, capex, nwc):
-		
+
 		Plus = daa
-	
+
 		lessCapEx = Less(capex.Projection)
 		lessNWC = Less(nwc)
 		Lesses = listOp(lessCapEx, lessNWC, '+')
-		
+
 		adjustments = listOp(Plus, Lesses, '+')
-		
+
 		self.Projection = listOp(netincome, adjustments, '+') #will need some generalization work
 
 
@@ -125,28 +125,28 @@ class incomeStatement:
 		self.amortization = amortization
 		self.taxRate = taxRate
 		self.timeFrame = timeFrame
-	
+
 	def calculate(self):
 		self.EBITDAStart = self.revenueStart * self.EBITDAMargin
 		self.purchasePrice = self.purchaseMultiple * self.EBITDAStart
-		
+
 		self.debtRequired = (int(self.debtToEquity.split(':')[0])/100) * self.purchasePrice
 		self.equityRequired = (int(self.debtToEquity.split(':')[1])/100) * self.purchasePrice
-		
+
 		self.revenue = Revenue(self.revenueStart, self.revenueGrowth, self.timeFrame)
-		
+
 		self.ebitda = EBITDA(self.revenue.Projection, self.EBITDAMargin)
 		self.daa = DaA(self.depreciation, self.amortization, self.revenue.Projection)
-		
+
 		self.ebit = EBIT(self.ebitda.Projection, self.daa.Projection)
 		self.debtinterest = debtInterest(self.debtRequired, self.interestRate, self.revenue.Projection)
-		
+
 		self.ebt = EBT(self.ebit.Projection, self.debtinterest.Projection)
 		self.taxcalc = taxCalc(self.ebt.Projection, self.taxRate)
-		
+
 		self.netincome = netIncome(self.ebt.Projection, self.taxcalc.Projection)
-		
-		self.incomeStatementRaw = pd.DataFrame({ 
+
+		self.incomeStatementRaw = pd.DataFrame({
 					'Revenue':self.revenue.Projection,
 					'EBITDA':self.ebitda.Projection,
 					'D&A':self.daa.Projection,
@@ -156,30 +156,30 @@ class incomeStatement:
 					'Tax Expense':self.taxcalc.Projection,
 					'Next Income':self.netincome.Projection})
 		self.cleanIncomeStatement = self.incomeStatementRaw.T.round(2)
-	
+
 	def getStatement(self):
 		self.calculate()
 		return self.cleanIncomeStatement
 
 class cashFlowStament:
-	
-	def __init__(self, 
+
+	def __init__(self,
 				 incomestatement,
 				 capexMargin,
 				 nwc ):
-				 
+
 		self.incomestatement = incomestatement
 		self.capexMargin = capexMargin
 		self.nwc = nwc
-	
+
 	def calculate(self): #needs some generalization work
 		self.netincome = self.incomestatement.netincome.Projection
 		self.daa = self.incomestatement.daa.Projection
 		self.capex =  capEx(self.incomestatement.revenue.Projection, self.capexMargin)#this will be changed and generalized
 		self.nwc = [self.nwc]*len(self.daa) #this will be changed and generalized
-		
+
 		self.fcf = FCF(self.netincome, self.daa, self.capex, self.nwc).Projection[:-1] #needs ssome generalization work
-		
+
 
 #Assumptions ~ each of these will become a class
 
@@ -206,7 +206,7 @@ taxRate = 40/100 #float ~ must be a percent
 timeFrame = 5 + 1 #int years
 
 debtPaydownAtCompletion = True #boolean toggle
-	
+
 
 IS = incomeStatement(purchaseMultiple,
 				 debtToEquity,
@@ -221,8 +221,8 @@ IS = incomeStatement(purchaseMultiple,
 IS.calculate()
 
 
-CFS = cashFlowStament(IS, 
-					  CAPEX, 
+CFS = cashFlowStament(IS,
+					  CAPEX,
 					  WCGrowth)
 CFS.calculate()
 
@@ -233,6 +233,3 @@ netDebtAtExit = IS.debtRequired - cummulativeCashFlow
 ev = TEV - netDebtAtExit
 moi = EV / IS.equityRequired
 irr = IRR(MOI, timeFrame)
-
-
-					

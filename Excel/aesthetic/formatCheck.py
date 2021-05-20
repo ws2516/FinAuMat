@@ -19,23 +19,23 @@ other = Font(color = "00339966", name = 'Cambria', size = 10)
 def formater(x):
 
 	if type(x.value) is str:
-	
+
 		if x.value[0:2] == '=\'':
 			x.font = other
 			return (x.value, 'Other')
-			
+
 		elif x.value[0  ] == '=':
 			x.font = formulae
 			return (x.value, 'Formula')
-			
+
 		else:
 			x.font = strings
 			return (x.value, 'String')
-			
+
 	else:
 		x.font = inputs
 		return (x.value, 'Number')
-	
+
 
 #add check for the titles and underline, make this a copy/paste - run to completion
 #of a 2 pager fin statement
@@ -50,4 +50,3 @@ for sheet in wb.worksheets:
 			formater(cell)
 
 wb.save(filename = dest_filename)
-	

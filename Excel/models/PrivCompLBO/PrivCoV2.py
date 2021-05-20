@@ -2,7 +2,7 @@
 
 Getting a bit more complex with: http://www.streetofwalls.com/finance-training-courses/private-equity-training/lbo-modeling-test-example/
 
-Here the focus will be on sources and uses and debt schedule as well as building out a 
+Here the focus will be on sources and uses and debt schedule as well as building out a
 clear integrated financial statement system
 
 	Balance
@@ -29,15 +29,15 @@ def listOp(list1, list2, op):
 	if op == '+':
 		sum_list = [a + b for a, b in zip(list1, list2)]
 		return sum_list
-	
+
 	elif op == '*':
 		prod_list = [a * b for a, b in zip(list1, list2)]
 		return prod_list
-	
+
 	elif op == '/':
 		div_list = [a / b for a, b in zip(list1, list2)]
 		return div_list
-	
+
 	else:
 		print('Check your function definition.')
 
@@ -49,15 +49,15 @@ class projectionPass:
 		self.Projection = listOp(list1,list2, op)
 
 class itemized:
-	
+
 	def __init__(self, initial, growthRate, lineItems, years):
 		for i in range(len(lineItems)):
 			setattr(self, lineItems[i].upper()+'PROJECTION', self.project(initial[i],growthRate[i], years)) #we use upper so we have to keep this for now
 		self.Projection = self.sumAll() #listOp(self.all()[0],self.all()[1], '+')
-	
+
 	def project(self, initial, growthRate, years):
 		return [initial * (1+growthRate)**i for i in range(0,years)]
-	
+
 	def sumAll(cls): # I dont like this but it works
 		returnAll = [value for name, value in vars(cls).items() if name.isupper()]
 		sums = np.zeros(len(returnAll[0]))
@@ -68,7 +68,7 @@ class itemized:
 class DaA:
 	def __init__(self, depr, amort, rev): #these need to be lists in the end
 		self.Projection = [depr + amort]*len(rev)
-	
+
 class EBIT:
 	def __init__(self, EBITDA, DaA):
 		self.Projection = listOp(EBITDA, Less(DaA) ,'+')
@@ -95,15 +95,15 @@ class capEx:
 
 class FCF:
 	def __init__(self, netincome, daa, capex, nwc):
-		
+
 		Plus = daa
-	
+
 		lessCapEx = Less(capex.Projection)
 		lessNWC = Less(nwc)
 		Lesses = listOp(lessCapEx, lessNWC, '+')
-		
+
 		adjustments = listOp(Plus, Lesses, '+')
-		
+
 		self.Projection = listOp(netincome, adjustments, '+') #will need some generalization work
 
 class totalDebt:
@@ -114,33 +114,33 @@ class totalDebt:
 			setattr(self, leverageSource[i].lower()+'debtfees', leverageFees[i]*leverageMultiple[i]*startingEBITDA)
 		self.TotalLeverage = self.sumAllTotals() #listOp(self.all()[0],self.all()[1], '+')
 		self.TotalLeverageFees = self.sumAllFees()
-	
+
 	def sumAllTotals(cls): # I dont like this but it works
 		returnAll = [value for name, value in vars(cls).items() if name.isupper()]
 		sums = 0
 		for i in returnAll:
 			sums += i
 		return sums
-	
+
 	def sumAllFees(cls): # I dont like this but it works
 		returnAll = [value for name, value in vars(cls).items() if name.islower()]
 		sums = 0
 		for i in returnAll:
 			sums += i
 		return sums
-		
+
 class valuationTable:
-	
+
 	def __init__(self, IS, debt, cash):
 		self.transactionValue = IS.purchasePrice
-		
+
 		self.debt = Less(debt)[0] #will need to come from BS
 		self.cash = cash[0] #will need to come from BS
-		
+
 		self.offerValue = self.transactionValue + self.debt + self.cash
-		
+
 class Uses:
-	
+
 	def __init__(self, IS, existingDebt, totalDebt, transactionCosts):
 		self.purchaseEquity = IS.purchasePrice
 		self.refinanceExistingDebt = existingDebt
@@ -149,7 +149,7 @@ class Uses:
 		self.totalUses = self.purchaseEquity + self.refinanceExistingDebt + self.financingFees + self.transactionCosts
 
 class Sources:
-	
+
 	def __init__(self, totalDebt, cashOnHand, uses):
 		debtNames = [name for name, value in vars(totalDebt).items() if name.isupper()]
 		debtValues = [value for name, value in vars(totalDebt).items() if name.isupper()]
@@ -158,7 +158,7 @@ class Sources:
 		self.totalSources = uses.totalUses
 		self.cashOnHand = cashOnHand
 		self.sponsorEquity = self.totalSources - np.sum(debtValues) - self.cashOnHand
-		
+
 
 #statements
 class incomeStatement:
@@ -168,19 +168,19 @@ class incomeStatement:
 				 purchaseMultiple,
 				 debtToEquity,
 				 interestRate,
-				 
+
 				 revenueStart,
 				 revenueLineItems,
 				 revenueGrowth,
-				 
+
 				 cogsStart,
 				 cogsLineItems,
 				 cogsGrowth,
-				 
+
 				 sgaStart,
 				 sgaLineItems,
-				 sgaGrowth,				 
-				 
+				 sgaGrowth,
+
 				 depreciation,
 				 amortization,
 				 taxRate,
@@ -189,15 +189,15 @@ class incomeStatement:
 		self.purchaseMultiple = purchaseMultiple
 		self.debtToEquity = debtToEquity
 		self.interestRate = interestRate
-		
+
 		self.revenueStart = revenueStart
 		self.revenueLineItems = revenueLineItems
 		self.revenueGrowth = revenueGrowth
-		
+
 		self.cogsStart = cogsStart
 		self.cogsLineItems = cogsLineItems
 		self.cogsGrowth = cogsGrowth
-		
+
 		self.sgaStart = sgaStart
 		self.sgaLineItems = sgaLineItems
 		self.sgaGrowth = sgaGrowth
@@ -206,36 +206,36 @@ class incomeStatement:
 		self.amortization = amortization
 		self.taxRate = taxRate
 		self.timeFrame = timeFrame
-	
+
 	def calculate(self):
-		
+
 		self.revenue = itemized(self.revenueStart, self.revenueGrowth, self.revenueLineItems, self.timeFrame)
-		
+
 		self.cogs = itemized(self.cogsStart, self.cogsGrowth, self.cogsLineItems, self.timeFrame)
 		self.grossprofit = projectionPass(self.revenue.Projection, Less(self.cogs.Projection), '+')
-		
+
 		self.sga = itemized(self.sgaStart, self.sgaGrowth, self.sgaLineItems, self.timeFrame)
 		self.ebitda = projectionPass(self.grossprofit.Projection, Less(self.sga.Projection),'+')
 
 		self.EBITDAStart = self.ebitda.Projection[0]
-		
+
 		self.purchasePrice = self.purchaseMultiple * self.EBITDAStart
-		
+
 		self.debtRequired = (int(self.debtToEquity.split(':')[0])/100) * self.purchasePrice
 		self.equityRequired = (int(self.debtToEquity.split(':')[1])/100) * self.purchasePrice
-		
+
 		self.daa = DaA(self.depreciation, self.amortization, self.revenue.Projection)
-		
+
 		self.ebit = EBIT(self.ebitda.Projection, self.daa.Projection)
 		self.debtinterest = debtInterest(self.debtRequired, self.interestRate, self.revenue.Projection)
-		
+
 		self.ebt = EBT(self.ebit.Projection, self.debtinterest.Projection)
 		self.taxcalc = taxCalc(self.ebt.Projection, self.taxRate)
-		
+
 		self.netincome = netIncome(self.ebt.Projection, self.taxcalc.Projection)
-		
+
 		#automate this
-		self.incomeStatementRaw = pd.DataFrame({ 
+		self.incomeStatementRaw = pd.DataFrame({
 					'Revenue':self.revenue.Projection,
 					'COGS':self.cogs.Projection,
 					'Gross Profit':self.grossprofit.Projection,
@@ -248,28 +248,28 @@ class incomeStatement:
 					'Tax Expense':self.taxcalc.Projection,
 					'Next Income':self.netincome.Projection})
 		self.cleanIncomeStatement = self.incomeStatementRaw.T.round(2)
-	
+
 	def getStatement(self):
 		self.calculate()
 		return self.cleanIncomeStatement
 
 class cashFlowStament:
-	
-	def __init__(self, 
+
+	def __init__(self,
 				 incomestatement,
 				 capexMargin,
 				 nwc ):
-				 
+
 		self.incomestatement = incomestatement
 		self.capexMargin = capexMargin
 		self.nwc = nwc
-	
+
 	def calculate(self): #needs some generalization work
 		self.netincome = self.incomestatement.netincome.Projection
 		self.daa = self.incomestatement.daa.Projection
 		self.capex =  capEx(self.incomestatement.revenue.Projection, self.capexMargin)#this will be changed and generalized
 		self.nwc = [self.nwc]*len(self.daa) #this will be changed and generalized
-		
+
 		self.fcf = FCF(self.netincome, self.daa, self.capex, self.nwc).Projection[:-1] #needs ssome generalization work
 
 class SUs:
@@ -306,14 +306,14 @@ class balanceSheet:
 			self.checked = True
 		else:
 			self.checked = False
-	
+
 	def calculate(self):
 		if self.checked:
 			for i in range(len(self.assetTypes)):
 				setattr(self, self.assetTypes[i]+'_Asset', self.assetValues[i])
 			for i in range(len(self.liabilityTypes)):
 				setattr(self, self.liabilityTypes[i]+'_Liability', self.liabilityValues[i])
-			
+
 			assetTotal, liabilityTotal = 0, 0
 			classDict = vars(self)
 			for named in classDict:
@@ -324,15 +324,15 @@ class balanceSheet:
 					assetTotal += classDict[str(named)]
 				else:
 					continue
-			
+
 			self.total_Assets = assetTotal
 			self.total_Liabilities = liabilityTotal
-			
+
 			#think about how we can show "accounts receviable/payable etc"
-			
+
 		else:
 			print('You have made a mistake - Fix your inputs')
-		
+
 #Assumptions ~ each of these will become a class
 
 purchaseMultiple = 10 #float
@@ -398,15 +398,15 @@ IS = incomeStatement(purchaseMultiple,
 				 revenueStart,
 				 revenueLineItems,
 				 revenueGrowth,
-				 
+
 				 cogsStart,
 				 cogsLineItems,
 				 cogsGrowth,
-				 
+
 				 sgaStart,
 				 sgaLineItems,
 				 sgaGrowth,
-				 
+
 				 depreciation,
 				 amortization,
 				 taxRate,
@@ -415,18 +415,18 @@ IS.calculate()
 
 valuation = valuationTable(IS, startingDebt, startingCash)
 
-CFS = cashFlowStament(IS, 
-					  CAPEX, 
+CFS = cashFlowStament(IS,
+					  CAPEX,
 					  WCGrowth)
 CFS.calculate()
 
 SUs = SUs(debtTypes,
 		  debtLeverage,
 		  debtInterestFees,
-		  
+
 		  timeFrame,
 		  IS,
-		  
+
 		  refinancingExistingDebt,
 		  transactionFees,
 		  cashOnHand)
@@ -445,6 +445,3 @@ netDebtAtExit = IS.debtRequired - cummulativeCashFlow
 ev = TEV - netDebtAtExit
 moi = ev / IS.equityRequired
 irr = IRR(moi, timeFrame)
-
-
-					

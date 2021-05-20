@@ -18,7 +18,7 @@ img.shape
 #thresholding the image to a binary image
 thresh,img_bin = cv2.threshold(img,128,255,cv2.THRESH_BINARY | cv2.THRESH_OTSU)
 
-#inverting the image 
+#inverting the image
 img_bin = 255-img_bin
 cv2.imwrite('./cv_inverted.png',img_bin)
 #Plotting the image to see the output
@@ -27,7 +27,7 @@ plt.show()
 
 # countcol(width) of kernel as 100th of total width
 kernel_len = np.array(img).shape[1]//100
-# Defining a vertical kernel to detect all vertical lines of image 
+# Defining a vertical kernel to detect all vertical lines of image
 ver_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, kernel_len))
 # Defining a horizontal kernel to detect all horizontal lines of image
 hor_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_len, 1))
@@ -93,7 +93,7 @@ heights = [boundingBoxes[i][3] for i in range(len(boundingBoxes))]
 #Get mean of heights
 mean = np.mean(heights)
 
-#Create list box to store all boxes in  
+#Create list box to store all boxes in
 box = []
 # Get position (x,y), width and height for every contour and show the contour on image
 for c in contours:
@@ -101,7 +101,7 @@ for c in contours:
     if (w<1000 and h<500):
         image = cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
         box.append([x,y,w,h])
-        
+
 plotting = plt.imshow(image,cmap='gray')
 plt.show()
 
@@ -111,26 +111,26 @@ column=[]
 j=0
 
 #Sorting the boxes to their respective row and column
-for i in range(len(box)):    
-        
+for i in range(len(box)):
+
     if(i==0):
         column.append(box[i])
-        previous=box[i]    
-    
+        previous=box[i]
+
     else:
         if(box[i][1]<=previous[1]+mean/2):
             column.append(box[i])
-            previous=box[i]            
-            
+            previous=box[i]
+
             if(i==len(box)-1):
-                row.append(column)        
-            
+                row.append(column)
+
         else:
             row.append(column)
             column=[]
             previous = box[i]
             column.append(box[i])
-            
+
 print(column)
 print(row)
 
@@ -178,7 +178,7 @@ for i in range(len(finalboxes)):
                 resizing = cv2.resize(border, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
                 dilation = cv2.dilate(resizing, kernel,iterations=1)
                 erosion = cv2.erode(dilation, kernel,iterations=2)
-                
+
                 out = pytesseract.image_to_string(erosion)
                 if(len(out)==0):
                     out = pytesseract.image_to_string(erosion, config='--psm 3')
